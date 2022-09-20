@@ -240,13 +240,13 @@ resource "aws_instance" "web_server" {
     connection {
       type = "ssh"
       user = "ubuntu"
-      private_key = file("E:/workfolder/aws-wordpress-boilerplate/.aws/wordpress-boilerplate.pem")
+      private_key = file("../.aws/wordpress-boilerplate.pem")
       host = aws_instance.web_server.public_ip
     }
   }
 
   provisioner "local-exec" {
-    command = "ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"E:/workfolder/aws-wordpress-boilerplate/.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
+    command = "ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
   }
 
   tags = {
