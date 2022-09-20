@@ -1,0 +1,59 @@
+---
+  - name: Instalando os pacotes abaixo
+    apt:
+      name:
+      - nginx
+      - unzip
+      - php8.1-zip
+      - php-imagick
+      - php8.1-curl
+      - php8.1-fpm
+      - php8.1-mbstring
+      - php8.1-cli
+      - php8.1-bcmath
+      - php8.1-xml
+      - php8.1-mysql
+      - php8.1-common
+      - php8.1-gd
+      update_cache: yes
+
+  - name: Setting up variables
+    set_fact:
+      #MySQL Settings to be rendered by terraform
+      db_name: ${db_name}  
+      db_user: ${db_user}
+      db_pass: ${db_pass}
+      db_host: ${db_host}
+
+  - name: Vhost nginx para wordpress
+    template:
+      src: example.com.conf.j2
+      dest: /etc/nginx/sites-enabled/default
+
+  - name: Download do projeto wordpress
+    ansible.builtin.unarchive:
+      src: https://wordpress.org/latest.zip
+      dest: /var/www/html/
+      remote_src: yes 
+ 
+  - name: Permissao
+    ansible.builtin.file:
+      path: /var/www/html/wordpress
+      owner: www-data
+      group: www-data
+      mode: '0755'
+  
+  - name: Arquivo de configuracao wordpress
+    template:
+      src: wp-config.php.j2
+      dest: /var/www/html/wordpress/wp-config.php  
+
+  - name: Restart nginx
+    service:
+      name: nginx
+      state: restarted
+
+  - name: Restart php8.1-fpm
+    service:
+      name: php8.1-fpm
+      state: restarted                        
