@@ -1,6 +1,6 @@
 ---
   - name: wordpress
-    hosts: aws-test
+    hosts: all
     become: yes
     remote_user: ubuntu
 
