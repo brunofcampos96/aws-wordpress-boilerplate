@@ -361,10 +361,10 @@ resource "aws_elb" "wordpress_elb" {
   }
 
   listener {
-    instance_port      = 80
-    instance_protocol  = "http"
+    instance_port      = 443
+    instance_protocol  = "tcp"
     lb_port            = 443
-    lb_protocol        = "https"
+    lb_protocol        = "tcp"
   }
   health_check {
     healthy_threshold   = 2
