@@ -23,10 +23,14 @@
       state: directory
       mode: '0755'
 
-  - name: Creating fake ssl certificate
-    ansible.builtin.raw: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt -subj "/C=BR/ST=Minas Gerais/L=Belo Horizonte/O=Teste/OU=Teste/CN=teste.com" &
-      openssl rsa -in privateKey.key -text > private.pem &
-      openssl x509 -inform PEM -in certificate.crt > public.pem
+  - name: Creating ssl Certificate
+    ansible.builtin.raw: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt -subj "/C=BR/ST=Minas Gerais/L=Belo Horizonte/O=Teste/OU=Teste/CN=teste.com"
+  
+  - name: Creating ssl Private pem
+    ansible.builtin.raw: openssl rsa -in privateKey.key -text > private.pem
+      
+  - name: Creating ssl Public Pem
+    ansible.builtin.raw: openssl x509 -inform PEM -in certificate.crt > public.pem
 
   - name: Copy private key
     ansible.builtin.copy:
