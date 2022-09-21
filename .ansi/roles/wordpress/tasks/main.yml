@@ -17,9 +17,6 @@
       - php8.1-gd
       update_cache: yes
 
-    vars_files:
-      - ../defaults/tf_ansible_vars.yml
-
   - name: Setting up variables
     set_fact:
       #MySQL Settings to be rendered by terraform

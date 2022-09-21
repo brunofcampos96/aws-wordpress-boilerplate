@@ -4,5 +4,8 @@
     become: yes
     remote_user: ubuntu
 
+    vars_files:
+      - ./defaults/tf_ansible_vars.yml
+
     roles:
       - wordpress

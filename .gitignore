@@ -3,3 +3,4 @@
 .infra/terraform.tfstate
 .infra/terraform.tfstate.backup
 .aws/
+.ansi/defaults

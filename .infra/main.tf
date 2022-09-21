@@ -302,12 +302,10 @@ module "rds_database" {
 
 resource "local_file" "tf_ansible_vars" {
   content = <<-DOC
-  vars = {
-    db_name = "${var.db_name}"
-    db_user = "${var.username}"
-    db_pass = "${var.password}"
-    db_host = "${module.rds_database.db_instance_endpoint}"
-  }
+    db_name: "${var.db_name}"
+    db_user: "${var.username}"
+    db_pass: "${var.password}"
+    db_host: "${module.rds_database.db_instance_endpoint}"
   DOC
-  filename = "./.ansi/wordpress/defaults/tf_ansible_vars.yml"
+  filename = "../.ansi/defaults/tf_ansible_vars.yml"
 }
