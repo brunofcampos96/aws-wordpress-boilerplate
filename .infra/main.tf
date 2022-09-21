@@ -343,7 +343,7 @@ resource "local_file" "tf_ansible_vars" {
     db_user: "${var.username}"
     db_pass: "${var.password}"
     db_host: "${module.rds_database.db_instance_endpoint}"
-    lb_endpoint: "${aws_elb.wordpress_elb.endpoint}"
+    lb_dns: "${aws_elb.wordpress_elb.dns_name}"
   DOC
   filename = "../.ansi/defaults/tf_ansible_vars.yml"
 }
