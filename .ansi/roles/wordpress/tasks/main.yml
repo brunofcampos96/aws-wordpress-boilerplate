@@ -32,11 +32,13 @@
     ansible.builtin.copy:
       src: private.pem
       dest: /etc/nginx/ssls/
+      remote_src: yes
 
   - name: Copy public key
     ansible.builtin.copy:
       src: public.pem
       dest: /etc/nginx/ssls/
+      remote_src: yes
 
   - name: Vhost nginx para wordpress
     template:
