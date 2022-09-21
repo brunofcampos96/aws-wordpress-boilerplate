@@ -351,6 +351,7 @@ resource "local_file" "tf_ansible_vars" {
 resource "aws_elb" "wordpress_elb" {
   name               = "wordpress-elb"
   availability_zones = ["sa-east-1a", "sa-east-1b"]
+  subnets            = [aws_subnet.public_az_a.id, aws_subnet.public_az_b.id]
   security_groups    = [aws_security_group.load_balancer.id]
 
   listener {
