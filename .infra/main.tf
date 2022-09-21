@@ -285,6 +285,10 @@ resource "aws_instance" "web_server" {
     command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
   }
 
+  depends_on = [
+    local_file.tf_ansible_vars
+  ]
+
   tags = {
     Name = "web-server"
   }
@@ -346,6 +350,10 @@ resource "local_file" "tf_ansible_vars" {
     lb_dns: "${aws_elb.wordpress_elb.dns_name}"
   DOC
   filename = "../.ansi/defaults/tf_ansible_vars.yml"
+ 
+  depends_on = [
+    module.rds_database
+  ]
 }
 
 resource "aws_elb" "wordpress_elb" {
