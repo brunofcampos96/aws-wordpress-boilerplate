@@ -277,25 +277,6 @@ resource "aws_instance" "web_server" {
   subnet_id                   = aws_subnet.public_az_a.id
   associate_public_ip_address = true
   key_name                    = "wordpress-boilerplate"
-  
-  provisioner "remote-exec" {
-    inline = ["echo 'Configurando Wordpress'"]
-
-    connection {
-      type = "ssh"
-      user = "ubuntu"
-      private_key = file("../.aws/wordpress-boilerplate.pem")
-      host = aws_instance.web_server.public_ip
-    }
-  }
-
-  provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
-  }
-
-  depends_on = [
-    local_file.tf_ansible_vars
-  ]
 
   tags = {
     Name = "web-server"
@@ -358,9 +339,25 @@ resource "local_file" "tf_ansible_vars" {
     lb_dns: "${aws_elb.wordpress_elb.dns_name}"
   DOC
   filename = "../.ansi/defaults/tf_ansible_vars.yml"
- 
+
+  provisioner "remote-exec" {
+    inline = ["echo 'Configurando Wordpress'"]
+
+    connection {
+      type = "ssh"
+      user = "ubuntu"
+      private_key = file("../.aws/wordpress-boilerplate.pem")
+      host = aws_instance.web_server.public_ip
+    }
+  }
+
+  provisioner "local-exec" {
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
+  }
+
   depends_on = [
-    module.rds_database
+    module.rds_database,
+    aws_elb.wordpress_elb
   ]
 }
 
