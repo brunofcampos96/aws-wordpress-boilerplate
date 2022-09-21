@@ -25,6 +25,15 @@
       db_pass: ${db_pass}
       db_host: ${db_host}
 
+  - name: Check mandatory variables imported from Terraform
+    assert:
+      that:
+        - db_name is defined
+        - db_user is defined
+        - db_pass is defined
+        - db_host is defined
+      fail_msg: "tf_* variable usually defined in '../defaults/tf_ansible_vars.yml' is missing"
+
   - name: Vhost nginx para wordpress
     template:
       src: nginx.conf.j2
