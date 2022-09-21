@@ -30,11 +30,17 @@
 
   - name: Copy private key
     ansible.builtin.copy:
+      src: certificate.crt
+      dest: /etc/nginx/ssls/
+      remote_src: yes
+
+  - name: Copy private pem
+    ansible.builtin.copy:
       src: private.pem
       dest: /etc/nginx/ssls/
       remote_src: yes
 
-  - name: Copy public key
+  - name: Copy public pem
     ansible.builtin.copy:
       src: public.pem
       dest: /etc/nginx/ssls/
