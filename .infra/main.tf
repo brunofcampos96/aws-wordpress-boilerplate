@@ -276,6 +276,7 @@ module "rds_database" {
   multi_az = true
 
   vpc_security_group_ids = [aws_security_group.database.id]
+  create_random_password = false
 
   skip_final_snapshot = true
   create_db_subnet_group = true

@@ -17,14 +17,6 @@
       - php8.1-gd
       update_cache: yes
 
-  - name: Setting up variables
-    set_fact:
-      #MySQL Settings to be rendered by terraform
-      db_name: ${db_name}  
-      db_user: ${db_user}
-      db_pass: ${db_pass}
-      db_host: ${db_host}
-
   - name: Check mandatory variables imported from Terraform
     assert:
       that:
