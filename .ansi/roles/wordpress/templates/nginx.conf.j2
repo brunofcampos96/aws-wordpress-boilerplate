@@ -1,5 +1,7 @@
 server {
-    listen 80;
+    listen 443 ssl;
+    ssl_certificate ssls/certificate.crt;
+    ssl_certificate_key ssls/private.pem;
     server_name _;
 
     root /var/www/html/wordpress/;

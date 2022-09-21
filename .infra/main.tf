@@ -156,6 +156,8 @@ module "bruno_campos_vpc" {
   source = "terraform-aws-modules/vpc/aws"
   name   = "Bruno-VPC"
   cidr   = "10.30.0.0/16"
+  
+  enable_dns_hostnames = true
 
   tags = {
     Name = "Bruno-VPC"
@@ -221,6 +223,40 @@ resource "aws_security_group" "database" {
 
   tags = {
     Name = "RDS Security Group"
+  }
+}
+
+resource "aws_security_group" "load_balancer" {
+  name        = "Inbound traffic"
+  description = "Inbound traffic"
+  vpc_id      = module.bruno_campos_vpc.vpc_id
+
+  ingress {
+    description      = "HTTP"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description      = "HTTPS"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  tags = {
+    Name = "Ec2 Instace Security Group"
   }
 }
 
@@ -307,6 +343,44 @@ resource "local_file" "tf_ansible_vars" {
     db_user: "${var.username}"
     db_pass: "${var.password}"
     db_host: "${module.rds_database.db_instance_endpoint}"
+    lb_endpoint: "${aws_elb.wordpress_elb.endpoint}"
   DOC
   filename = "../.ansi/defaults/tf_ansible_vars.yml"
+}
+
+resource "aws_elb" "wordpress_elb" {
+  name               = "wordpress-elb"
+  availability_zones = ["sa-east-1a", "sa-east-1b"]
+  security_groups    = [aws_security_group.load_balancer.id]
+
+  listener {
+    instance_port     = 80
+    instance_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
+  }
+
+  listener {
+    instance_port      = 80
+    instance_protocol  = "http"
+    lb_port            = 443
+    lb_protocol        = "https"
+  }
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    target              = "HTTP:80/"
+    interval            = 30
+  }
+
+  instances                   = [aws_instance.web_server.id]
+  cross_zone_load_balancing   = true
+  idle_timeout                = 400
+  connection_draining         = true
+  connection_draining_timeout = 400
+
+  tags = {
+    Name = "wordpress_elb"
+  }
 }

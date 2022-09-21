@@ -17,14 +17,15 @@
       - php8.1-gd
       update_cache: yes
 
-  - name: Check mandatory variables imported from Terraform
-    assert:
-      that:
-        - db_name is defined
-        - db_user is defined
-        - db_pass is defined
-        - db_host is defined
-      fail_msg: "tf_* variable usually defined in '../defaults/tf_ansible_vars.yml' is missing"
+  - name: Creating fake ssl certificate
+    ansible.builtin.command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt -subj "/C=BR/ST=Minas Gerais/L=Belo Horizonte/O=Teste/OU=Teste/CN=teste.com"
+
+  - name: Converting private key to PEM
+    ansible.builtin.command: openssl rsa -in privateKey.key -text > private.pem
+
+  - name: Converting public key to PEM
+    ansible.builtin.command: openssl x509 -inform PEM -in certificate.crt > public.pem
+
 
   - name: Vhost nginx para wordpress
     template:
@@ -36,7 +37,7 @@
       src: https://wordpress.org/latest.zip
       dest: /var/www/html/
       remote_src: yes 
- 
+
   - name: Permissao
     ansible.builtin.file:
       path: /var/www/html/wordpress
