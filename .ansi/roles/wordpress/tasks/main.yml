@@ -24,9 +24,19 @@
       mode: '0755'
 
   - name: Creating fake ssl certificate
-    ansible.builtin.raw: cd /etc/nginx/ssls/ & openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt -subj "/C=BR/ST=Minas Gerais/L=Belo Horizonte/O=Teste/OU=Teste/CN=teste.com" &
+    ansible.builtin.raw: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout privateKey.key -out certificate.crt -subj "/C=BR/ST=Minas Gerais/L=Belo Horizonte/O=Teste/OU=Teste/CN=teste.com" &
       openssl rsa -in privateKey.key -text > private.pem &
       openssl x509 -inform PEM -in certificate.crt > public.pem
+
+  - name: Copy private key
+    ansible.builtin.copy:
+      src: private.pem
+      dest: /etc/nginx/ssls/
+
+  - name: Copy public key
+    ansible.builtin.copy:
+      src: public.pem
+      dest: /etc/nginx/ssls/
 
   - name: Vhost nginx para wordpress
     template:
