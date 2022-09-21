@@ -227,8 +227,8 @@ resource "aws_security_group" "database" {
 }
 
 resource "aws_security_group" "load_balancer" {
-  name        = "Inbound traffic"
-  description = "Inbound traffic"
+  name        = "Load balancer rules"
+  description = "Load balancer rules"
   vpc_id      = module.bruno_campos_vpc.vpc_id
 
   ingress {
@@ -256,7 +256,7 @@ resource "aws_security_group" "load_balancer" {
   }
 
   tags = {
-    Name = "Ec2 Instace Security Group"
+    Name = "Load balancer security group"
   }
 }
 
