@@ -364,7 +364,7 @@ module "rds_database" {
 
   skip_final_snapshot = true
   create_db_subnet_group = true
-  subnet_ids = [aws_subnet.db_az_a.id, aws_subnet.db_az_b.id]
+  subnet_ids = [aws_subnet.db_az_a.id, aws_subnet.db_az_c.id]
 
   # DB parameter group
   family = "mysql5.7"
