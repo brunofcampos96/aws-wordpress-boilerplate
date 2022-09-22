@@ -184,7 +184,7 @@ resource "aws_security_group" "web_server" {
     from_port        = 80
     to_port          = 80
     protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    security_groups = [aws_security_group.load_balancer.id]
   }
 
   ingress {
@@ -192,15 +192,14 @@ resource "aws_security_group" "web_server" {
     from_port        = 443
     to_port          = 443
     protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
+    security_groups = [aws_security_group.load_balancer.id]
   }
 
   egress {
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    security_groups = [aws_security_group.load_balancer.id]
   }
 
   tags = {
@@ -269,18 +268,29 @@ resource "aws_security_group" "load_balancer" {
 }
 
 /* EC2 */
-resource "aws_instance" "web_server" {
+resource "aws_launch_configuration" "instance_template" {
   ami                         = "ami-08ae71fd7f1449df1"
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.web_server.id]
-  monitoring                  = true
-  subnet_id                   = aws_subnet.public_az_a.id
   associate_public_ip_address = true
   key_name                    = "wordpress-boilerplate"
 
   tags = {
     Name = "web-server"
   }
+}
+
+resource "aws_autoscaling_group" "auto_scalling" {
+  min_size             = 2
+  max_size             = 4
+  desired_capacity     = 2
+  launch_configuration = aws_launch_configuration.instance_template.name
+  vpc_zone_identifier  = module.bruno_campos_vpc.public_subnets
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment" {
+  autoscaling_group_name = aws_autoscaling_group.auto_scalling.id
+  elb                    = aws_elb.wordpress_elb.id
 }
 
 resource "aws_key_pair" "wordpress-boilerplate" {
@@ -327,7 +337,6 @@ module "rds_database" {
       value = "utf8mb4"
     }
   ]
-
 }
 
 resource "local_file" "tf_ansible_vars" {
