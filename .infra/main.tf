@@ -448,7 +448,7 @@ resource "aws_elb" "wordpress_elb" {
     healthy_threshold   = 2
     unhealthy_threshold = 2
     timeout             = 3
-    target              = "HTTP:80/"
+    target              = "HTTP:80/info.php"
     interval            = 30
   }
 
