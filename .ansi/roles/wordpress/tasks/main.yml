@@ -61,6 +61,11 @@
       dest: /var/www/html/
       remote_src: yes 
 
+  - name: Info php for LB HealthCheck
+    template:
+      src: info.php.j2
+      dest: /var/www/html/wordpress/
+
   - name: Permissao
     ansible.builtin.file:
       path: /var/www/html/wordpress
