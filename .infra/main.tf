@@ -268,11 +268,12 @@ resource "aws_security_group" "load_balancer" {
 }
 
 /* EC2 */
-resource "aws_launch_template" "launch_template" {
-  image_id                    = "ami-08ae71fd7f1449df1"
+resource "aws_instance" "base_image" {
+  ami                         = "ami-08ae71fd7f1449df1"
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.web_server.id]
   monitoring                  = true
+  subnet_id                   = aws_subnet.private_az_a.id
   availability_zone           = "sa-east-1a"
   associate_public_ip_address = true
   key_name                    = "wordpress-boilerplate"
@@ -282,9 +283,20 @@ resource "aws_launch_template" "launch_template" {
   }
 }
 
+resource "aws_ami_from_instance" "custom_ami" {
+  name               = "custom_ami"
+  source_instance_id = aws_instance.base_image.id
+}
+
+resource "aws_launch_template" "this" {
+  name_prefix   = "asg_launch_template"
+  image_id = aws_ami_from_instance.custom_ami.id
+  instance_type = "t2.micro"
+}
+
 resource "aws_autoscaling_group" "this" {
   launch_template {
-    name    = aws_launch_template.launch_template.name
+    id = aws_launch_template.this.id
     version = "$Latest"
   }
 
@@ -296,7 +308,7 @@ resource "aws_autoscaling_group" "this" {
   desired_capacity     = 2
   termination_policies = ["OldestInstance"]
 
-  health_check_type         = var.infra_role == "http" ? "ELB" : "EC2"
+  health_check_type         = "ELB"
   health_check_grace_period = 90    # Seconds
 
   lifecycle {
@@ -322,7 +334,7 @@ resource "aws_autoscaling_policy" "http" {
 }
 
 resource "aws_autoscaling_attachment" "asg_attachment" {
-  autoscaling_group_name = aws_autoscaling_group.auto_scalling.id
+  autoscaling_group_name = aws_autoscaling_group.this.id
   elb                    = aws_elb.wordpress_elb.id
 }
 
@@ -389,12 +401,12 @@ resource "local_file" "tf_ansible_vars" {
       type = "ssh"
       user = "ubuntu"
       private_key = file("../.aws/wordpress-boilerplate.pem")
-      host = aws_instance.web_server.public_ip
+      host = aws_instance.base_image.public_ip
     }
   }
 
   provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.base_image.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
   }
 
   depends_on = [
@@ -429,7 +441,7 @@ resource "aws_elb" "wordpress_elb" {
     interval            = 30
   }
 
-  instances                   = [aws_instance.web_server.id]
+  instances                   = [aws_instance.base_image.id]
   cross_zone_load_balancing   = true
   idle_timeout                = 400
   connection_draining         = true
