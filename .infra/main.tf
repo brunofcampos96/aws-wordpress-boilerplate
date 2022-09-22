@@ -268,10 +268,12 @@ resource "aws_security_group" "load_balancer" {
 }
 
 /* EC2 */
-resource "aws_launch_configuration" "instance_template" {
-  ami                         = "ami-08ae71fd7f1449df1"
+resource "aws_launch_template" "launch_template" {
+  image_id                    = "ami-08ae71fd7f1449df1"
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.web_server.id]
+  monitoring                  = true
+  availability_zone           = "sa-east-1a"
   associate_public_ip_address = true
   key_name                    = "wordpress-boilerplate"
 
@@ -280,12 +282,43 @@ resource "aws_launch_configuration" "instance_template" {
   }
 }
 
-resource "aws_autoscaling_group" "auto_scalling" {
+resource "aws_autoscaling_group" "this" {
+  launch_template {
+    name    = aws_launch_template.launch_template.name
+    version = "$Latest"
+  }
+
+  name                = "asg"
+  vpc_zone_identifier = module.bruno_campos_vpc.private_subnets
+
   min_size             = 2
   max_size             = 4
   desired_capacity     = 2
-  launch_configuration = aws_launch_configuration.instance_template.name
-  vpc_zone_identifier  = module.bruno_campos_vpc.public_subnets
+  termination_policies = ["OldestInstance"]
+
+  health_check_type         = var.infra_role == "http" ? "ELB" : "EC2"
+  health_check_grace_period = 90    # Seconds
+
+  lifecycle {
+    # see notes in https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_attachment
+    ignore_changes = [desired_capacity, load_balancers, target_group_arns]
+  }
+}
+
+resource "aws_autoscaling_policy" "http" {
+  count = 1
+  name = "auto_scalling_policy"
+  adjustment_type = "ChangeInCapacity"
+  policy_type = "TargetTrackingScaling"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 80.0
+  }
+
+  autoscaling_group_name = aws_autoscaling_group.this.name
 }
 
 resource "aws_autoscaling_attachment" "asg_attachment" {
