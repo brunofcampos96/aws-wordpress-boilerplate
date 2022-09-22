@@ -52,14 +52,14 @@ resource "aws_subnet" "public_az_a" {
   }
 }
 
-resource "aws_subnet" "public_az_b" {
+resource "aws_subnet" "public_az_c" {
   vpc_id                  = module.bruno_campos_vpc.vpc_id
   cidr_block              = "10.30.1.0/24"
-  availability_zone       = "sa-east-1b"
+  availability_zone       = "sa-east-1c"
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "Pub-AZ-B"
+    Name = "Pub-AZ-C"
   }
 }
 
@@ -73,13 +73,13 @@ resource "aws_subnet" "private_az_a" {
   }
 }
 
-resource "aws_subnet" "private_az_b" {
+resource "aws_subnet" "private_az_c" {
   vpc_id            = module.bruno_campos_vpc.vpc_id
   cidr_block        = "10.30.3.0/24"
-  availability_zone = "sa-east-1b"
+  availability_zone = "sa-east-1c"
 
   tags = {
-    Name = "Priv-AZ-B"
+    Name = "Priv-AZ-C"
   }
 }
 
@@ -93,13 +93,13 @@ resource "aws_subnet" "db_az_a" {
   }
 }
 
-resource "aws_subnet" "db_az_b" {
+resource "aws_subnet" "db_az_c" {
   vpc_id            = module.bruno_campos_vpc.vpc_id
   cidr_block        = "10.30.5.0/24"
-  availability_zone = "sa-east-1b"
+  availability_zone = "sa-east-1c"
 
   tags = {
-    Name = "Db-AZ-B"
+    Name = "Db-AZ-C"
   }
 }
 
@@ -122,8 +122,8 @@ resource "aws_route_table_association" "private_az_a" {
   route_table_id = aws_route_table.private.id
 }
 
-resource "aws_route_table_association" "private_az_b" {
-  subnet_id      = aws_subnet.private_az_b.id
+resource "aws_route_table_association" "private_az_c" {
+  subnet_id      = aws_subnet.private_az_c.id
   route_table_id = aws_route_table.private.id
 }
 
@@ -146,8 +146,8 @@ resource "aws_route_table_association" "public_az_a" {
   route_table_id = aws_default_route_table.public.id
 }
 
-resource "aws_route_table_association" "public_az_b" {
-  subnet_id      = aws_subnet.public_az_b.id
+resource "aws_route_table_association" "public_az_c" {
+  subnet_id      = aws_subnet.public_az_c.id
   route_table_id = aws_default_route_table.public.id
 }
 
@@ -192,13 +192,6 @@ resource "aws_security_group" "web_server" {
     from_port        = 443
     to_port          = 443
     protocol         = "tcp"
-    security_groups = [aws_security_group.load_balancer.id]
-  }
-
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
     security_groups = [aws_security_group.load_balancer.id]
   }
 
@@ -262,41 +255,98 @@ resource "aws_security_group" "load_balancer" {
     cidr_blocks      = ["0.0.0.0/0"]
   }
 
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
-
   tags = {
     Name = "Load balancer security group"
   }
 }
 
-resource "aws_security_group_rule" "extra_rule" {
-  security_group_id = aws_security_group.web_server.id
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
+resource "aws_security_group_rule" "egress_lb_instance_http" {
+  security_group_id        = aws_security_group.web_server.id
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  type                     = "egress"
+  source_security_group_id = aws_security_group.load_balancer.id
+}
+
+resource "aws_security_group_rule" "egress_lb_instance_https" {
+  security_group_id        = aws_security_group.web_server.id
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
   type                     = "egress"
   source_security_group_id = aws_security_group.load_balancer.id
 }
 
 /* EC2 */
-resource "aws_instance" "web_server" {
+resource "aws_instance" "base_image" {
   ami                         = "ami-08ae71fd7f1449df1"
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.web_server.id]
   monitoring                  = true
   subnet_id                   = aws_subnet.public_az_a.id
+  availability_zone           = "sa-east-1a"
   associate_public_ip_address = true
   key_name                    = "wordpress-boilerplate"
 
   tags = {
     Name = "web-server"
   }
+}
+
+resource "aws_ami_from_instance" "custom_ami" {
+  name               = "custom_ami"
+  source_instance_id = aws_instance.base_image.id
+}
+
+resource "aws_launch_template" "this" {
+  name_prefix   = "asg_launch_template"
+  image_id = aws_ami_from_instance.custom_ami.id
+  instance_type = "t2.micro"
+}
+
+resource "aws_autoscaling_group" "this" {
+  launch_template {
+    id = aws_launch_template.this.id
+    version = "$Latest"
+  }
+
+  name                = "asg"
+  vpc_zone_identifier = [aws_subnet.private_az_a.id, aws_subnet.private_az_c.id]
+
+  min_size             = 2
+  max_size             = 4
+  desired_capacity     = 2
+  termination_policies = ["OldestInstance"]
+
+  health_check_type         = "ELB"
+  health_check_grace_period = 90    # Seconds
+
+  lifecycle {
+    # see notes in https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_attachment
+    ignore_changes = [desired_capacity, load_balancers, target_group_arns]
+  }
+}
+
+resource "aws_autoscaling_policy" "http" {
+  count = 1
+  name = "auto_scalling_policy"
+  adjustment_type = "ChangeInCapacity"
+  policy_type = "TargetTrackingScaling"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 80.0
+  }
+
+  autoscaling_group_name = aws_autoscaling_group.this.name
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment" {
+  autoscaling_group_name = aws_autoscaling_group.this.id
+  elb                    = aws_elb.wordpress_elb.id
 }
 
 resource "aws_key_pair" "wordpress-boilerplate" {
@@ -325,7 +375,7 @@ module "rds_database" {
 
   skip_final_snapshot = true
   create_db_subnet_group = true
-  subnet_ids = [aws_subnet.db_az_a.id, aws_subnet.db_az_b.id]
+  subnet_ids = [aws_subnet.db_az_a.id, aws_subnet.db_az_c.id]
 
   # DB parameter group
   family = "mysql5.7"
@@ -343,7 +393,6 @@ module "rds_database" {
       value = "utf8mb4"
     }
   ]
-
 }
 
 resource "local_file" "tf_ansible_vars" {
@@ -363,12 +412,12 @@ resource "local_file" "tf_ansible_vars" {
       type = "ssh"
       user = "ubuntu"
       private_key = file("../.aws/wordpress-boilerplate.pem")
-      host = aws_instance.web_server.public_ip
+      host = aws_instance.base_image.public_ip
     }
   }
 
   provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.web_server.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.base_image.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
   }
 
   depends_on = [
@@ -379,7 +428,7 @@ resource "local_file" "tf_ansible_vars" {
 
 resource "aws_elb" "wordpress_elb" {
   name               = "wordpress-elb"
-  subnets            = [aws_subnet.public_az_a.id, aws_subnet.public_az_b.id]
+  subnets            = [aws_subnet.public_az_a.id, aws_subnet.public_az_c.id]
   security_groups    = [aws_security_group.load_balancer.id]
 
   listener {
@@ -403,7 +452,7 @@ resource "aws_elb" "wordpress_elb" {
     interval            = 30
   }
 
-  instances                   = [aws_instance.web_server.id]
+  instances                   = [aws_instance.base_image.id]
   cross_zone_load_balancing   = true
   idle_timeout                = 400
   connection_draining         = true
