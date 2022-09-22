@@ -52,14 +52,14 @@ resource "aws_subnet" "public_az_a" {
   }
 }
 
-resource "aws_subnet" "public_az_b" {
+resource "aws_subnet" "public_az_c" {
   vpc_id                  = module.bruno_campos_vpc.vpc_id
   cidr_block              = "10.30.1.0/24"
-  availability_zone       = "sa-east-1b"
+  availability_zone       = "sa-east-1c"
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "Pub-AZ-B"
+    Name = "Pub-AZ-C"
   }
 }
 
@@ -73,13 +73,13 @@ resource "aws_subnet" "private_az_a" {
   }
 }
 
-resource "aws_subnet" "private_az_b" {
+resource "aws_subnet" "private_az_c" {
   vpc_id            = module.bruno_campos_vpc.vpc_id
   cidr_block        = "10.30.3.0/24"
-  availability_zone = "sa-east-1b"
+  availability_zone = "sa-east-1c"
 
   tags = {
-    Name = "Priv-AZ-B"
+    Name = "Priv-AZ-C"
   }
 }
 
@@ -93,13 +93,13 @@ resource "aws_subnet" "db_az_a" {
   }
 }
 
-resource "aws_subnet" "db_az_b" {
+resource "aws_subnet" "db_az_c" {
   vpc_id            = module.bruno_campos_vpc.vpc_id
   cidr_block        = "10.30.5.0/24"
-  availability_zone = "sa-east-1b"
+  availability_zone = "sa-east-1c"
 
   tags = {
-    Name = "Db-AZ-B"
+    Name = "Db-AZ-C"
   }
 }
 
@@ -122,8 +122,8 @@ resource "aws_route_table_association" "private_az_a" {
   route_table_id = aws_route_table.private.id
 }
 
-resource "aws_route_table_association" "private_az_b" {
-  subnet_id      = aws_subnet.private_az_b.id
+resource "aws_route_table_association" "private_az_c" {
+  subnet_id      = aws_subnet.private_az_c.id
   route_table_id = aws_route_table.private.id
 }
 
@@ -146,8 +146,8 @@ resource "aws_route_table_association" "public_az_a" {
   route_table_id = aws_default_route_table.public.id
 }
 
-resource "aws_route_table_association" "public_az_b" {
-  subnet_id      = aws_subnet.public_az_b.id
+resource "aws_route_table_association" "public_az_c" {
+  subnet_id      = aws_subnet.public_az_c.id
   route_table_id = aws_default_route_table.public.id
 }
 
@@ -273,7 +273,7 @@ resource "aws_instance" "base_image" {
   instance_type               = "t2.micro"
   vpc_security_group_ids      = [aws_security_group.web_server.id]
   monitoring                  = true
-  subnet_id                   = aws_subnet.private_az_a.id
+  subnet_id                   = aws_subnet.public_az_a.id
   availability_zone           = "sa-east-1a"
   associate_public_ip_address = true
   key_name                    = "wordpress-boilerplate"
@@ -301,7 +301,7 @@ resource "aws_autoscaling_group" "this" {
   }
 
   name                = "asg"
-  vpc_zone_identifier = module.bruno_campos_vpc.private_subnets
+  vpc_zone_identifier = [aws_subnet.private_az_a.id, aws_subnet.private_az_c.id]
 
   min_size             = 2
   max_size             = 4
@@ -417,7 +417,7 @@ resource "local_file" "tf_ansible_vars" {
 
 resource "aws_elb" "wordpress_elb" {
   name               = "wordpress-elb"
-  subnets            = [aws_subnet.public_az_a.id, aws_subnet.public_az_b.id]
+  subnets            = [aws_subnet.public_az_a.id, aws_subnet.public_az_c.id]
   security_groups    = [aws_security_group.load_balancer.id]
 
   listener {
