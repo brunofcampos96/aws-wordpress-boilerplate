@@ -64,7 +64,7 @@
   - name: Info php for LB HealthCheck
     template:
       src: info.php.j2
-      dest: /var/www/html/wordpress/
+      dest: /var/www/html/wordpress/info.php
 
   - name: Permissao
     ansible.builtin.file:
