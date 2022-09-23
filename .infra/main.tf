@@ -304,6 +304,7 @@ resource "aws_launch_template" "this" {
   image_id = aws_ami_from_instance.custom_ami.id
   instance_type = "t2.micro"
   vpc_security_group_ids = [aws_security_group.web_server.id]
+  key_name = "wordpress-boilerplate"
 }
 
 resource "aws_autoscaling_group" "this" {
