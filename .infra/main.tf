@@ -305,6 +305,9 @@ resource "aws_launch_template" "this" {
   instance_type = "t2.micro"
   vpc_security_group_ids = [aws_security_group.web_server.id]
   key_name = "wordpress-boilerplate"
+  depends_on = [
+    local_file.tf_ansible_vars
+  ]
 }
 
 resource "aws_autoscaling_group" "this" {
