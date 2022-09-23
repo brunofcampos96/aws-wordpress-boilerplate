@@ -297,6 +297,32 @@ resource "aws_instance" "base_image" {
 resource "aws_ami_from_instance" "custom_ami" {
   name               = "custom_ami"
   source_instance_id = aws_instance.base_image.id
+  depends_on = [
+    module.rds_database,
+    aws_elb.wordpress_elb,
+    local_file.tf_ansible_vars,
+    null_resource.provisioner
+  ]
+}
+
+resource "null_resource" "provisioner" {
+  depends_on = [
+    local_file.tf_ansible_vars
+  ]
+  provisioner "remote-exec" {
+    inline = ["echo 'Configurando Wordpress'"]
+
+    connection {
+      type = "ssh"
+      user = "ubuntu"
+      private_key = file("../.aws/wordpress-boilerplate.pem")
+      host = aws_instance.base_image.public_ip
+    }
+  }
+
+  provisioner "local-exec" {
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.base_image.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
+  }
 }
 
 resource "aws_launch_template" "this" {
@@ -305,9 +331,6 @@ resource "aws_launch_template" "this" {
   instance_type = "t2.micro"
   vpc_security_group_ids = [aws_security_group.web_server.id]
   key_name = "wordpress-boilerplate"
-  depends_on = [
-    local_file.tf_ansible_vars
-  ]
 }
 
 resource "aws_autoscaling_group" "this" {
@@ -409,21 +432,6 @@ resource "local_file" "tf_ansible_vars" {
     lb_dns: "${aws_elb.wordpress_elb.dns_name}"
   DOC
   filename = "../.ansi/defaults/tf_ansible_vars.yml"
-
-  provisioner "remote-exec" {
-    inline = ["echo 'Configurando Wordpress'"]
-
-    connection {
-      type = "ssh"
-      user = "ubuntu"
-      private_key = file("../.aws/wordpress-boilerplate.pem")
-      host = aws_instance.base_image.public_ip
-    }
-  }
-
-  provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${aws_instance.base_image.public_ip}, --private-key \"../.aws/wordpress-boilerplate.pem\" \"../.ansi/wordpress.yml\""
-  }
 
   depends_on = [
     module.rds_database,
