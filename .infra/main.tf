@@ -303,6 +303,7 @@ resource "aws_launch_template" "this" {
   name_prefix   = "asg_launch_template"
   image_id = aws_ami_from_instance.custom_ami.id
   instance_type = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.web_server.id]
 }
 
 resource "aws_autoscaling_group" "this" {
