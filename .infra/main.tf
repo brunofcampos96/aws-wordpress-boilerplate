@@ -261,21 +261,21 @@ resource "aws_security_group" "load_balancer" {
 }
 
 resource "aws_security_group_rule" "egress_lb_instance_http" {
-  security_group_id        = aws_security_group.web_server.id
+  security_group_id        = aws_security_group.load_balancer.id
   from_port                = 80
   to_port                  = 80
   protocol                 = "tcp"
   type                     = "egress"
-  source_security_group_id = aws_security_group.load_balancer.id
+  source_security_group_id = aws_security_group.web_server.id
 }
 
 resource "aws_security_group_rule" "egress_lb_instance_https" {
-  security_group_id        = aws_security_group.web_server.id
+  security_group_id        = aws_security_group.load_balancer.id
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
   type                     = "egress"
-  source_security_group_id = aws_security_group.load_balancer.id
+  source_security_group_id = aws_security_group.web_server.id
 }
 
 /* EC2 */
